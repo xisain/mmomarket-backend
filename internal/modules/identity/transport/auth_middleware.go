@@ -40,6 +40,16 @@ func RequireAuth(
 			)
 			return
 		}
+		if errors.Is(err, application.ErrSuspended) {
+			c.AbortWithStatusJSON(
+				http.StatusForbidden,
+				gin.H{
+					"success": false,
+					"message": "Account is suspended",
+				},
+			)
+			return
+		}
 
 		if err != nil {
 			c.AbortWithStatusJSON(

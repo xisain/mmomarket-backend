@@ -8,6 +8,8 @@ import (
 	"xisain/mmomarket-backend/internal/platform/config"
 	"xisain/mmomarket-backend/internal/platform/database"
 	"xisain/mmomarket-backend/internal/modules/identity/application"
+	sellerApp "xisain/mmomarket-backend/internal/modules/seller/application"
+	sellerTransport "xisain/mmomarket-backend/internal/modules/seller/transport"
 	identityTransport "xisain/mmomarket-backend/internal/modules/identity/transport"
 	dbqueries "xisain/mmomarket-backend/internal/platform/database/db"
 	"github.com/gin-gonic/gin"
@@ -27,8 +29,9 @@ func main() {
 		log.Fatal(err)
 	}
 	defer db.Close()
-
+	gin.SetMode(gin.ReleaseMode)
 	router := gin.Default()
+	// router.
 
 	if err := router.SetTrustedProxies(nil); err != nil {
 		log.Fatal(err)
@@ -50,6 +53,15 @@ func main() {
 	identityTransport.RegisterAuthRoutes(
 		api,
 		authHandler,
+		authService,
+	)
+	sellerService := sellerApp.NewSellerService(db)
+	sellerHandler := sellerTransport.NewSellerHandler(sellerService)
+	
+	sellerTransport.RegisterSellerRoutes(
+		api,
+		sellerHandler,
+		sellerService,
 		authService,
 	)
 	api.GET("/health", func(c *gin.Context) {

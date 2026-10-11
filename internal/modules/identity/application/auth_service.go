@@ -7,10 +7,12 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"strings"
 	"time"
 	"xisain/mmomarket-backend/internal/modules/identity/infrastructure"
 	"xisain/mmomarket-backend/internal/platform/database/db"
+
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -20,6 +22,7 @@ var (
 	ErrInvalidCredentials = errors.New("invalid Credential")
 	ErrEmailTaken         = errors.New("email taken")
 	ErrUnauthorized       = errors.New("unauthorized")
+	ErrSuspended		  = errors.New("Account is Suspended")
 )
 
 type AuthService struct {
@@ -69,10 +72,17 @@ func (s *AuthService) Login(ctx context.Context, email, password string) (db.Use
 	user, err := s.queries.GetUserByEmail(ctx, email)
 	if err != nil {
 		if !errors.Is(err, pgx.ErrNoRows) {
-			return db.User{}, "", err
+			return db.User{}, "", ErrInvalidCredentials
 		}
-		return db.User{}, "", ErrInvalidCredentials
+		return db.User{}, "", err
 	}
+	fmt.Printf("user : %v\n", user.ID)
+	fmt.Printf("Password Verify %t\n", infrastructure.VerifyPassword(password,user.PasswordHash))
+	if user.Status != "active" || !infrastructure.VerifyPassword(password,user.PasswordHash){
+		return db.User{}, "", ErrInvalidCredentials
+		
+	}
+	
 	token := make([]byte, 32)
 	if _, err := rand.Read(token); err != nil {
 		return db.User{}, "", err
@@ -127,6 +137,9 @@ func (s *AuthService) GetCurrentUser(
 		return db.User{}, err
 	}
 
+	if user.Status == "suspended" {
+		return db.User{}, ErrSuspended
+	}
 	if user.Status != "active" {
 		return db.User{}, ErrUnauthorized
 	}
