@@ -5,13 +5,16 @@ import (
 	"log"
 	"net/http"
 	"time"
-	"xisain/mmomarket-backend/internal/platform/config"
-	"xisain/mmomarket-backend/internal/platform/database"
 	"xisain/mmomarket-backend/internal/modules/identity/application"
+	identityTransport "xisain/mmomarket-backend/internal/modules/identity/transport"
 	sellerApp "xisain/mmomarket-backend/internal/modules/seller/application"
 	sellerTransport "xisain/mmomarket-backend/internal/modules/seller/transport"
-	identityTransport "xisain/mmomarket-backend/internal/modules/identity/transport"
+	gameApp "xisain/mmomarket-backend/internal/modules/game/application"
+	gameTransport "xisain/mmomarket-backend/internal/modules/game/transport"
+	"xisain/mmomarket-backend/internal/platform/config"
+	"xisain/mmomarket-backend/internal/platform/database"
 	dbqueries "xisain/mmomarket-backend/internal/platform/database/db"
+
 	"github.com/gin-gonic/gin"
 )
 
@@ -29,27 +32,26 @@ func main() {
 		log.Fatal(err)
 	}
 	defer db.Close()
-	gin.SetMode(gin.ReleaseMode)
+	// gin.SetMode(gin.ReleaseMode)
 	router := gin.Default()
+	router.Use(cfg.Sentry)
 	// router.
 
 	if err := router.SetTrustedProxies(nil); err != nil {
 		log.Fatal(err)
 	}
-	
+
 	queries := dbqueries.New(db)
-	
 
 	authService := application.NewAuthService(queries)
-	
 
 	authHandler := identityTransport.NewAuthHandler(
 		authService,
-		false, 
+		false,
 	)
 
 	api := router.Group("/api/v1")
-	
+
 	identityTransport.RegisterAuthRoutes(
 		api,
 		authHandler,
@@ -57,11 +59,19 @@ func main() {
 	)
 	sellerService := sellerApp.NewSellerService(db)
 	sellerHandler := sellerTransport.NewSellerHandler(sellerService)
-	
+
 	sellerTransport.RegisterSellerRoutes(
 		api,
 		sellerHandler,
 		sellerService,
+		authService,
+	)
+	gameService := gameApp.NewGameService(db)
+	gameHandler := gameTransport.NewGameHandler(gameService)
+	gameTransport.RegisterGameRoutes(
+		api,
+		gameHandler,
+		gameService,
 		authService,
 	)
 	api.GET("/health", func(c *gin.Context) {
@@ -87,6 +97,9 @@ func main() {
 			"success": true,
 			"message": "Database connected",
 		})
+	})
+	api.GET("/test-sentry", func(c *gin.Context) {
+		panic("Test Sentry Error!")
 	})
 
 	log.Printf("Starting API on port %s", cfg.AppPort)

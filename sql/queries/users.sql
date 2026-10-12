@@ -28,3 +28,13 @@ SET
     status = $2,
     updated_at = NOW()
 WHERE id = $1;
+
+
+-- name: IsUserAdmin :one
+SELECT EXISTS (
+    SELECT 1
+    FROM user_roles ur
+    JOIN roles r ON r.id = ur.role_id
+    WHERE ur.user_id = $1
+      AND r.name IN ('admin', 'super_admin')
+);

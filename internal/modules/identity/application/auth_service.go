@@ -22,7 +22,7 @@ var (
 	ErrInvalidCredentials = errors.New("invalid Credential")
 	ErrEmailTaken         = errors.New("email taken")
 	ErrUnauthorized       = errors.New("unauthorized")
-	ErrSuspended		  = errors.New("Account is Suspended")
+	ErrSuspended          = errors.New("Account is Suspended")
 )
 
 type AuthService struct {
@@ -71,18 +71,18 @@ func (s *AuthService) Login(ctx context.Context, email, password string) (db.Use
 
 	user, err := s.queries.GetUserByEmail(ctx, email)
 	if err != nil {
-		if !errors.Is(err, pgx.ErrNoRows) {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return db.User{}, "", ErrInvalidCredentials
 		}
 		return db.User{}, "", err
 	}
 	fmt.Printf("user : %v\n", user.ID)
-	fmt.Printf("Password Verify %t\n", infrastructure.VerifyPassword(password,user.PasswordHash))
-	if user.Status != "active" || !infrastructure.VerifyPassword(password,user.PasswordHash){
+	fmt.Printf("Password Verify %t\n", infrastructure.VerifyPassword(password, user.PasswordHash))
+	if user.Status != "active" || !infrastructure.VerifyPassword(password, user.PasswordHash) {
 		return db.User{}, "", ErrInvalidCredentials
-		
+
 	}
-	
+
 	token := make([]byte, 32)
 	if _, err := rand.Read(token); err != nil {
 		return db.User{}, "", err
@@ -159,4 +159,10 @@ func (s *AuthService) Logout(
 		ctx,
 		HashSessionToken(token),
 	)
+}
+func (s *AuthService) IsAdmin(
+	ctx context.Context,
+	userID pgtype.UUID,
+) (bool, error) {
+	return s.queries.IsUserAdmin(ctx, userID)
 }

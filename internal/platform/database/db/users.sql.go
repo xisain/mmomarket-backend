@@ -86,6 +86,23 @@ func (q *Queries) GetUserByID(ctx context.Context, id pgtype.UUID) (User, error)
 	return i, err
 }
 
+const isUserAdmin = `-- name: IsUserAdmin :one
+SELECT EXISTS (
+    SELECT 1
+    FROM user_roles ur
+    JOIN roles r ON r.id = ur.role_id
+    WHERE ur.user_id = $1
+      AND r.name IN ('admin', 'super_admin')
+)
+`
+
+func (q *Queries) IsUserAdmin(ctx context.Context, userID pgtype.UUID) (bool, error) {
+	row := q.db.QueryRow(ctx, isUserAdmin, userID)
+	var exists bool
+	err := row.Scan(&exists)
+	return exists, err
+}
+
 const updateUserStatus = `-- name: UpdateUserStatus :exec
 UPDATE users
 SET

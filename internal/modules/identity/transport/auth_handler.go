@@ -164,3 +164,12 @@ func (h *AuthHandler) Logout(c *gin.Context) {
 		"message": "Logout successful",
 	})
 }
+func currentUser(c *gin.Context) (db.User, bool) {
+	value, exists := c.Get("authUser")
+	if !exists {
+		return db.User{}, false
+	}
+
+	user, ok := value.(db.User)
+	return user, ok
+}

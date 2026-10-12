@@ -8,6 +8,37 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+type Game struct {
+	ID          pgtype.UUID        `json:"id"`
+	Name        string             `json:"name"`
+	Slug        string             `json:"slug"`
+	Description pgtype.Text        `json:"description"`
+	Publisher   pgtype.Text        `json:"publisher"`
+	IsActive    bool               `json:"is_active"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
+}
+
+type GameRegion struct {
+	ID        pgtype.UUID        `json:"id"`
+	GameID    pgtype.UUID        `json:"game_id"`
+	Name      string             `json:"name"`
+	Slug      string             `json:"slug"`
+	IsActive  bool               `json:"is_active"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
+}
+
+type GameServer struct {
+	ID        pgtype.UUID        `json:"id"`
+	RegionID  pgtype.UUID        `json:"region_id"`
+	Name      string             `json:"name"`
+	Slug      string             `json:"slug"`
+	IsActive  bool               `json:"is_active"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
+}
+
 type Role struct {
 	ID   int16  `json:"id"`
 	Name string `json:"name"`
