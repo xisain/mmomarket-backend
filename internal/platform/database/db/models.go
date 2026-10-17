@@ -39,6 +39,35 @@ type GameServer struct {
 	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
 }
 
+type Listing struct {
+	ID              pgtype.UUID        `json:"id"`
+	GameID          pgtype.UUID        `json:"game_id"`
+	CategoryID      pgtype.UUID        `json:"category_id"`
+	GameRegionID    pgtype.UUID        `json:"game_region_id"`
+	ServerID        pgtype.UUID        `json:"server_id"`
+	SellerID        pgtype.UUID        `json:"seller_id"`
+	Name            string             `json:"name"`
+	Slug            string             `json:"slug"`
+	Description     pgtype.Text        `json:"description"`
+	ImageUrl        pgtype.Text        `json:"image_url"`
+	Price           pgtype.Numeric     `json:"price"`
+	StockType       string             `json:"stock_type"`
+	StockQuantity   pgtype.Int8        `json:"stock_quantity"`
+	QuantityPerUnit int64              `json:"quantity_per_unit"`
+	Status          string             `json:"status"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+}
+
+type ListingCategory struct {
+	ID          pgtype.UUID      `json:"id"`
+	Name        string           `json:"name"`
+	Slug        string           `json:"slug"`
+	Description pgtype.Text      `json:"description"`
+	CreatedAt   pgtype.Timestamp `json:"created_at"`
+	UpdatedAt   pgtype.Timestamp `json:"updated_at"`
+}
+
 type Role struct {
 	ID   int16  `json:"id"`
 	Name string `json:"name"`

@@ -21,6 +21,11 @@ FROM users
 WHERE LOWER(email) = LOWER($1)
 LIMIT 1;
 
+-- name: ListUsers :many
+SELECT *
+FROM users
+ORDER BY created_at DESC;
+
 
 -- name: UpdateUserStatus :exec
 UPDATE users
