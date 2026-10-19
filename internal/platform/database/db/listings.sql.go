@@ -352,6 +352,66 @@ func (q *Queries) ListListingsByGameAndRegion(ctx context.Context, arg ListListi
 	return items, nil
 }
 
+const listListingsByGameSlugAndCategory = `-- name: ListListingsByGameSlugAndCategory :many
+SELECT ls.id, ls.game_id, ls.category_id, ls.game_region_id, ls.server_id, ls.seller_id, ls.name, ls.slug, ls.description, ls.image_url, ls.price, ls.stock_type, ls.stock_quantity, ls.quantity_per_unit, ls.status, ls.created_at, ls.updated_at 
+FROM  listings ls 
+JOIN games gm ON ls.game_id = gm.id  
+JOIN listing_categorys lc ON ls.category_id = lc.id
+JOIN sellers sl on ls.seller_id = sl.id
+WHERE gm.slug = $1 AND lc.slug = $2 
+LIMIT $3 OFFSET $4
+`
+
+type ListListingsByGameSlugAndCategoryParams struct {
+	Slug   string `json:"slug"`
+	Slug_2 string `json:"slug_2"`
+	Limit  int32  `json:"limit"`
+	Offset int32  `json:"offset"`
+}
+
+func (q *Queries) ListListingsByGameSlugAndCategory(ctx context.Context, arg ListListingsByGameSlugAndCategoryParams) ([]Listing, error) {
+	rows, err := q.db.Query(ctx, listListingsByGameSlugAndCategory,
+		arg.Slug,
+		arg.Slug_2,
+		arg.Limit,
+		arg.Offset,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Listing
+	for rows.Next() {
+		var i Listing
+		if err := rows.Scan(
+			&i.ID,
+			&i.GameID,
+			&i.CategoryID,
+			&i.GameRegionID,
+			&i.ServerID,
+			&i.SellerID,
+			&i.Name,
+			&i.Slug,
+			&i.Description,
+			&i.ImageUrl,
+			&i.Price,
+			&i.StockType,
+			&i.StockQuantity,
+			&i.QuantityPerUnit,
+			&i.Status,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listListingsBySeller = `-- name: ListListingsBySeller :many
 SELECT id, game_id, category_id, game_region_id, server_id, seller_id, name, slug, description, image_url, price, stock_type, stock_quantity, quantity_per_unit, status, created_at, updated_at FROM listings
 WHERE seller_id = $1

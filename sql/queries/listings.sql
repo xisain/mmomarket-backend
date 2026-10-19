@@ -44,6 +44,14 @@ SELECT * FROM listings
 WHERE game_id = $1 AND game_region_id = $2
 ORDER BY created_at DESC, id DESC
 LIMIT $3 OFFSET $4;
+-- name: ListListingsByGameSlugAndCategory :many
+SELECT ls.* 
+FROM  listings ls 
+JOIN games gm ON ls.game_id = gm.id  
+JOIN listing_categorys lc ON ls.category_id = lc.id
+JOIN sellers sl on ls.seller_id = sl.id
+WHERE gm.slug = $1 AND lc.slug = $2 
+LIMIT $3 OFFSET $4;
 
 -- name: ListListingsByServer :many
 SELECT * FROM listings

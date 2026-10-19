@@ -45,9 +45,11 @@ func publicUser(user db.User) gin.H {
 
 func (h *AuthHandler) Register(c *gin.Context) {
 	var req RegisterRequest
+
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"success": false,
+			"error":   http.StatusBadRequest,
 			"message": err.Error(),
 		})
 		return

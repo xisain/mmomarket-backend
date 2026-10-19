@@ -378,6 +378,28 @@ func (h *ListingHandler) ListListingByGameAndCategory(c *gin.Context) {
 	})
 }
 
+func (h *ListingHandler) ListingByGameSlugAndCategorySlug(c *gin.Context) {
+	gameSlug := c.Param("gameSlug")
+	categorySlug := c.Param("categorySlug")
+	limit := int32(10)
+	offset := int32(0)
+	params := db.ListListingsByGameSlugAndCategoryParams{
+		Slug:       gameSlug,
+		Slug_2:     categorySlug,
+		Limit:      limit,
+		Offset:     offset,
+	}
+	listings, err := h.service.ListListingByGameSlugAndCategorySlug(c.Request.Context(), params)
+	if err != nil {
+		respondError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"data":    listings,
+	})
+}
 func respondError(c *gin.Context, err error) {
 	status := http.StatusInternalServerError
 	message := "Failed to process listing request"

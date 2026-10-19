@@ -68,6 +68,23 @@ type ListingCategory struct {
 	UpdatedAt   pgtype.Timestamp `json:"updated_at"`
 }
 
+type Order struct {
+	ID          pgtype.UUID        `json:"id"`
+	BuyerID     pgtype.UUID        `json:"buyer_id"`
+	SellerID    pgtype.UUID        `json:"seller_id"`
+	ListingID   pgtype.UUID        `json:"listing_id"`
+	Status      string             `json:"status"`
+	Quantity    int32              `json:"quantity"`
+	Currency    string             `json:"currency"`
+	UnitPrice   int64              `json:"unit_price"`
+	TotalAmount int64              `json:"total_amount"`
+	ExpiresAt   pgtype.Timestamptz `json:"expires_at"`
+	PaidAt      pgtype.Timestamptz `json:"paid_at"`
+	CompletedAt pgtype.Timestamptz `json:"completed_at"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
+}
+
 type Role struct {
 	ID   int16  `json:"id"`
 	Name string `json:"name"`

@@ -305,6 +305,16 @@ func (h *ListingService) ListListingsBySeller(ctx context.Context, input db.List
 	return h.queries.ListListingsBySeller(ctx, input)
 }
 
+func (h *ListingService) ListListingByGameSlugAndCategorySlug(ctx context.Context,input db.ListListingsByGameSlugAndCategoryParams) ([]db.Listing, error){
+	if input.Slug == "" || input.Slug_2  == ""{
+		return nil, ErrListingInvalidSlug
+	}
+	if err := validatePagination(input.Limit, input.Offset); err != nil {
+		return nil, err
+	}
+	return h.queries.ListListingsByGameSlugAndCategory(ctx, input)
+}
+
 // UpdateListingInput contains only the fields editable by UpdateListing.
 type UpdateListingInput struct {
 	GameID       pgtype.UUID

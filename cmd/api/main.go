@@ -2,7 +2,7 @@ package main
 
 import (
 	"context"
-	"fmt"
+	// "fmt"
 	"log"
 	"net/http"
 	"time"
@@ -14,6 +14,8 @@ import (
 	listingTransport "xisain/mmomarket-backend/internal/modules/listing/transport"
 	sellerApp "xisain/mmomarket-backend/internal/modules/seller/application"
 	sellerTransport "xisain/mmomarket-backend/internal/modules/seller/transport"
+	OrderApp "xisain/mmomarket-backend/internal/modules/order/application"
+	OrderTransport "xisain/mmomarket-backend/internal/modules/order/transport"
 	"xisain/mmomarket-backend/internal/platform/config"
 	"xisain/mmomarket-backend/internal/platform/database"
 	dbqueries "xisain/mmomarket-backend/internal/platform/database/db"
@@ -80,6 +82,10 @@ func main() {
 	listingService := listingApp.NewListingService(db)
 	listingHandler := listingTransport.NewListingHandler(listingService)
 	listingTransport.RegisterListingRoutes(api, listingHandler, authService)
+	orderService := OrderApp.NewOrderService(db)
+	orderHandler := OrderTransport.NewOrderHandler(orderService,listingService)
+	OrderTransport.RegisterOrderRoute(api, orderHandler, authService)
+	
 	api.GET("/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"success": true,
@@ -109,9 +115,9 @@ func main() {
 	})
 
 	log.Printf("Starting API on port %s", cfg.AppPort)
-	for _, route := range router.Routes() {
-		fmt.Printf("Method: %s | Path: %s | Handler: %s\n", route.Method, route.Path, route.Handler)
-	}
+	// for _, route := range router.Routes() {
+	// 	fmt.Printf("Method: %s | Path: %s | Handler: %s\n", route.Method, route.Path, route.Handler)
+	// }
 	if err := router.Run(":" + cfg.AppPort); err != nil {
 		log.Fatal(err)
 	}

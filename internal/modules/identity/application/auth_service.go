@@ -46,6 +46,7 @@ func (s *AuthService) Register(ctx context.Context, email, password, displayName
 	if err != nil {
 		return db.User{}, err
 	}
+
 	user, err := s.queries.CreateUser(ctx, db.CreateUserParams{
 		Email:        email,
 		PasswordHash: hash,
