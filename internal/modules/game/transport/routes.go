@@ -16,4 +16,8 @@ func RegisterGameRoutes(api *gin.RouterGroup, handler *GameHandler, gameService 
 	admin.GET("", handler.ListGame)
 	admin.POST("/:game_id/", handler.RegisterGameRegion)
 	admin.GET("/:game_id/", handler.listRegionByGame)
+	public := api.Group("/game")
+	public.GET("", handler.ListGameActive)
+	public.GET("/:slug/", handler.GetGame)
+	// public.GET("/:slug/categories", handler.GetCategoriesByGame)
 }

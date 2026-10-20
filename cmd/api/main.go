@@ -12,14 +12,15 @@ import (
 	identityTransport "xisain/mmomarket-backend/internal/modules/identity/transport"
 	listingApp "xisain/mmomarket-backend/internal/modules/listing/application"
 	listingTransport "xisain/mmomarket-backend/internal/modules/listing/transport"
-	sellerApp "xisain/mmomarket-backend/internal/modules/seller/application"
-	sellerTransport "xisain/mmomarket-backend/internal/modules/seller/transport"
 	OrderApp "xisain/mmomarket-backend/internal/modules/order/application"
 	OrderTransport "xisain/mmomarket-backend/internal/modules/order/transport"
+	sellerApp "xisain/mmomarket-backend/internal/modules/seller/application"
+	sellerTransport "xisain/mmomarket-backend/internal/modules/seller/transport"
 	"xisain/mmomarket-backend/internal/platform/config"
 	"xisain/mmomarket-backend/internal/platform/database"
 	dbqueries "xisain/mmomarket-backend/internal/platform/database/db"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 )
 
@@ -39,6 +40,25 @@ func main() {
 	defer db.Close()
 	// gin.SetMode(gin.ReleaseMode)
 	router := gin.Default()
+	router.Use(cors.New(cors.Config{
+		AllowOrigins: []string{
+			"http://localhost:3000",
+		},
+		AllowMethods: []string{
+			"GET",
+			"POST",
+			"PUT",
+			"DELETE",
+		},
+		AllowHeaders: []string{
+			"Origin",
+			"Content-Type",
+			"Accept",
+			"Authorization",
+		},
+		AllowCredentials: true,
+		MaxAge: 12 * time.Hour,
+	}))
 	router.Use(cfg.Sentry)
 	// router.
 

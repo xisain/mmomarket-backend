@@ -73,6 +73,20 @@ type GameRegionListResponse struct {
 	Data    []gin.H `json:"data"`
 }
 
+type GameDetailResponse struct {
+	ID          any    `json:"id"`
+	Name        string `json:"name"`
+	Slug        string `json:"slug"`
+	Description string `json:"description"`
+	Publisher   string `json:"publisher"`
+	IsActive    bool   `json:"is_active"`
+	CreatedAt   any    `json:"created_at"`
+	UpdatedAt   any    `json:"updated_at"`
+
+	Categories any `json:"categories"`
+	Regions    any `json:"regions"`
+}
+
 func parseUUID(value string) (pgtype.UUID, error) {
 	var id pgtype.UUID
 	err := id.Scan(value)
@@ -242,5 +256,98 @@ func (h *GameHandler) listRegionByGame(c *gin.Context) {
 		Message: "Game regions listed successfully",
 		Game:    gameResponse(game),
 		Data:    items,
+	})
+}
+
+func (h *GameHandler) ListGameActive(c *gin.Context) {
+	games, err := h.service.ListGameActive(c.Request.Context())
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"message": "Failed to list active games",
+		})
+		return
+	}
+	items := make([]gin.H, 0, len(games))
+	for _, game := range games {
+		items = append(items, gameResponse(game))
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"data":    items,
+	})
+}
+
+func (h *GameHandler) GetGame(c *gin.Context) {
+	slug := c.Param("slug")
+
+	game, err := h.service.GetGame(c.Request.Context(), slug)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"message": "Failed to get game",
+		})
+		return
+	}
+
+	gameCat, err := h.service.GetCategoriesByGame(
+		c.Request.Context(),
+		slug,
+	)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"message": "Failed to list game categories",
+		})
+		return
+	}
+
+	gameReg, err := h.service.ListRegionByGame(
+		c.Request.Context(),
+		game.ID,
+	)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"message": "Failed to list game regions",
+		})
+		return
+	}
+
+	categories := make([]gin.H, 0, len(gameCat))
+
+	for _, category := range gameCat {
+		categories = append(categories, gin.H{
+			"id":   category.CategoryID,
+			"name": category.CategoryName,
+			"slug": category.CategorySlug,
+		})
+	}
+
+	regions := make([]gin.H, 0, len(gameReg))
+
+	for _, region := range gameReg {
+		regions = append(regions, gameRegionResponse(region))
+	}
+
+	// data := gameResponse(game)
+	data := GameDetailResponse{
+		ID:          game.ID,
+		Name:        game.Name,
+		Slug:        game.Slug,
+		Description: game.Description.String,
+		Publisher:   game.Publisher.String,
+		IsActive:    game.IsActive,
+		CreatedAt:   game.CreatedAt,
+		UpdatedAt:   game.UpdatedAt,
+		Categories:  categories,
+		Regions:     regions,
+	}
+	
+
+	
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"data":    data,
 	})
 }

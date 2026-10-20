@@ -134,3 +134,21 @@ func (g *GameService) ListGames(ctx context.Context) ([]db.Game, error) {
 func (g *GameService) ListRegionByGame(ctx context.Context, gameID pgtype.UUID) ([]db.GameRegion, error) {
 	return g.queries.ListAllRegionsByGame(ctx, gameID)
 }
+
+func (g *GameService) ListGameActive(ctx context.Context) ([]db.Game, error) {
+	return g.queries.ListActiveGames(ctx)
+}
+func (g *GameService) GetGame(ctx context.Context, slug string) (db.Game, error) {
+	slug = strings.ToLower(slug)
+	game, err := g.queries.GetGameBySlug(ctx, slug)
+	if err != nil {
+		return db.Game{}, fmt.Errorf("get game by slug: %w", err)
+	}
+	return game, nil
+}
+func (s *GameService) GetCategoriesByGame(
+    ctx context.Context,
+    slug string,
+) ([]db.GetCategoriesByGameSlugRow, error) {
+    return s.queries.GetCategoriesByGameSlug(ctx, slug)
+}

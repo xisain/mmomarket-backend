@@ -50,6 +50,43 @@ func (q *Queries) CreateGame(ctx context.Context, arg CreateGameParams) (Game, e
 	return i, err
 }
 
+const getCategoriesByGameSlug = `-- name: GetCategoriesByGameSlug :many
+SELECT
+    lc.id AS category_id,
+    lc.name AS category_name,
+    lc.slug AS category_slug
+FROM games g
+CROSS JOIN listing_categorys lc
+WHERE g.slug = $1
+ORDER BY lc.name
+`
+
+type GetCategoriesByGameSlugRow struct {
+	CategoryID   pgtype.UUID `json:"category_id"`
+	CategoryName string      `json:"category_name"`
+	CategorySlug string      `json:"category_slug"`
+}
+
+func (q *Queries) GetCategoriesByGameSlug(ctx context.Context, gameSlug string) ([]GetCategoriesByGameSlugRow, error) {
+	rows, err := q.db.Query(ctx, getCategoriesByGameSlug, gameSlug)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetCategoriesByGameSlugRow
+	for rows.Next() {
+		var i GetCategoriesByGameSlugRow
+		if err := rows.Scan(&i.CategoryID, &i.CategoryName, &i.CategorySlug); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getGameById = `-- name: GetGameById :one
 SELECT id, name, slug, description, publisher, is_active, created_at, updated_at
 FROM games
@@ -121,6 +158,55 @@ func (q *Queries) ListActiveGames(ctx context.Context) ([]Game, error) {
 			&i.IsActive,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listGameCategories = `-- name: ListGameCategories :many
+SELECT
+    g.id AS game_id,
+    g.name AS game_name,
+    g.slug AS game_slug,
+    lc.id AS category_id,
+    lc.name AS category_name,
+    lc.slug AS category_slug
+FROM games g
+CROSS JOIN listing_categorys lc
+ORDER BY g.name, lc.name
+`
+
+type ListGameCategoriesRow struct {
+	GameID       pgtype.UUID `json:"game_id"`
+	GameName     string      `json:"game_name"`
+	GameSlug     string      `json:"game_slug"`
+	CategoryID   pgtype.UUID `json:"category_id"`
+	CategoryName string      `json:"category_name"`
+	CategorySlug string      `json:"category_slug"`
+}
+
+func (q *Queries) ListGameCategories(ctx context.Context) ([]ListGameCategoriesRow, error) {
+	rows, err := q.db.Query(ctx, listGameCategories)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListGameCategoriesRow
+	for rows.Next() {
+		var i ListGameCategoriesRow
+		if err := rows.Scan(
+			&i.GameID,
+			&i.GameName,
+			&i.GameSlug,
+			&i.CategoryID,
+			&i.CategoryName,
+			&i.CategorySlug,
 		); err != nil {
 			return nil, err
 		}
