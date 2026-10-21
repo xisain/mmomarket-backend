@@ -66,12 +66,20 @@ func (s *OrderService) RegisterOrder(ctx context.Context, input RegisterOrderInp
 	return order, orderError("register order", err)
 }
 
-func (s *OrderService) BuyerGetOrder(ctx context.Context, buyerID pgtype.UUID) ([]db.Order, error) {
-	if !buyerID.Valid {
-		return nil, ErrOrderInvalidReference
-	}
-	orders, err := s.queries.BuyerGetOrder(ctx, buyerID)
-	return orders, orderError("list buyer orders", err)
+func (s *OrderService) BuyerGetOrder(
+    ctx context.Context,
+    buyerID pgtype.UUID,
+) ([]db.BuyerGetOrderRow, error) {
+    if !buyerID.Valid {
+        return nil, ErrOrderInvalidReference
+    }
+
+    orders, err := s.queries.BuyerGetOrder(ctx, buyerID)
+    if err != nil {
+        return nil, orderError("list buyer orders", err)
+    }
+
+    return orders, nil
 }
 
 func (s *OrderService) BuyerGetOrderByStatus(ctx context.Context, input db.BuyerGetOrderByStatusParams) ([]db.Order, error) {

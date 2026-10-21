@@ -12,18 +12,79 @@ import (
 )
 
 const buyerGetOrder = `-- name: BuyerGetOrder :many
-SELECT id, buyer_id, seller_id, listing_id, status, quantity, currency, unit_price, total_amount, expires_at, paid_at, completed_at, created_at, updated_at FROM orders WHERE buyer_id = $1
+SELECT
+    ord.id, ord.buyer_id, ord.seller_id, ord.listing_id, ord.status, ord.quantity, ord.currency, ord.unit_price, ord.total_amount, ord.expires_at, ord.paid_at, ord.completed_at, ord.created_at, ord.updated_at,
+    jsonb_build_object(
+        'id', sl.id,
+        'shop_name', sl.shop_name,
+        'slug', sl.slug
+    ) AS seller,
+
+    jsonb_build_object(
+      'id',
+      ls.id,
+      'name',
+      ls.name,
+      'slug',
+      ls.slug,
+      'description',
+      ls.description,
+      'image_url',
+      ls.image_url,
+      'price',
+      ls.price,
+      'game', jsonb_build_object('id', gm.id, 'name', gm.name ),
+      'category', jsonb_build_object('id', lc.id, 'name', lc.name),
+      'region', jsonb_build_object('id', gr.id, 'name', gr.name),
+      'server', jsonb_build_object('id',gs.id, 'name',gs.name)
+
+    ) AS listing
+
+FROM orders AS ord
+JOIN sellers AS sl
+    ON ord.seller_id = sl.id
+JOIN listings AS ls
+    ON ord.listing_id = ls.id
+JOIN games gm 
+    ON ls.game_id = gm.id
+JOIN listing_categorys lc 
+    ON ls.category_id = lc.id
+JOIN game_regions gr 
+    ON ls.game_region_id =gr.id
+LEFT JOIN game_servers gs 
+    ON gs.id = ls.server_id
+WHERE ord.buyer_id = $1
+ORDER BY ord.created_at DESC, ord.id DESC
 `
 
-func (q *Queries) BuyerGetOrder(ctx context.Context, buyerID pgtype.UUID) ([]Order, error) {
+type BuyerGetOrderRow struct {
+	ID          pgtype.UUID        `json:"id"`
+	BuyerID     pgtype.UUID        `json:"buyer_id"`
+	SellerID    pgtype.UUID        `json:"seller_id"`
+	ListingID   pgtype.UUID        `json:"listing_id"`
+	Status      string             `json:"status"`
+	Quantity    int32              `json:"quantity"`
+	Currency    string             `json:"currency"`
+	UnitPrice   int64              `json:"unit_price"`
+	TotalAmount int64              `json:"total_amount"`
+	ExpiresAt   pgtype.Timestamptz `json:"expires_at"`
+	PaidAt      pgtype.Timestamptz `json:"paid_at"`
+	CompletedAt pgtype.Timestamptz `json:"completed_at"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
+	Seller      []byte             `json:"seller"`
+	Listing     []byte             `json:"listing"`
+}
+
+func (q *Queries) BuyerGetOrder(ctx context.Context, buyerID pgtype.UUID) ([]BuyerGetOrderRow, error) {
 	rows, err := q.db.Query(ctx, buyerGetOrder, buyerID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Order
+	var items []BuyerGetOrderRow
 	for rows.Next() {
-		var i Order
+		var i BuyerGetOrderRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.BuyerID,
@@ -39,6 +100,8 @@ func (q *Queries) BuyerGetOrder(ctx context.Context, buyerID pgtype.UUID) ([]Ord
 			&i.CompletedAt,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.Seller,
+			&i.Listing,
 		); err != nil {
 			return nil, err
 		}
@@ -176,6 +239,126 @@ func (q *Queries) CreateOrder(ctx context.Context, arg CreateOrderParams) (Order
 		&i.UpdatedAt,
 	)
 	return i, err
+}
+
+const listBuyerOrders = `-- name: ListBuyerOrders :many
+SELECT ord.id,
+       ord.buyer_id,
+       ord.seller_id,
+       ord.listing_id,
+       ord.status,
+       ord.quantity,
+       ord.currency,
+       ord.unit_price,
+       ord.total_amount,
+       ord.expires_at,
+       ord.paid_at,
+       ord.completed_at,
+       ord.created_at,
+       ord.updated_at,
+       jsonb_build_object(
+         'id',
+         sl.id,
+         'owner_id',
+         sl.owner_id,
+         'shop_name',
+         sl.shop_name,
+         'slug',
+         sl.slug,
+         'description',
+         sl.description
+       ) AS seller,
+       jsonb_build_object(
+         'id',
+         ls.id,
+         'name',
+         ls.name,
+         'slug',
+         ls.slug,
+         'description',
+         ls.description,
+         'image_url',
+         ls.image_url,
+         'price',
+         ls.price,
+         'game',
+         jsonb_build_object('id', gm.id, 'game_name', gm.name ),
+         'category', JSON_BUILD_OBJECT('id', lc.id, 'categori_name', lc.name)
+       ) AS listing
+FROM orders ord
+
+JOIN sellers sl ON ord.seller_id = sl.id
+    JOIN listings ls ON ord.listing_id = ls.id
+    JOIN games gm ON ls.game_id = gm.id
+    JOIN listing_categorys lc ON ls.category_id = lc.id
+WHERE ord.buyer_id = $1
+
+ORDER BY ord.created_at DESC
+
+LIMIT $3
+OFFSET $2
+`
+
+type ListBuyerOrdersParams struct {
+	BuyerID    pgtype.UUID `json:"buyer_id"`
+	PageOffset int32       `json:"page_offset"`
+	PageLimit  int32       `json:"page_limit"`
+}
+
+type ListBuyerOrdersRow struct {
+	ID          pgtype.UUID        `json:"id"`
+	BuyerID     pgtype.UUID        `json:"buyer_id"`
+	SellerID    pgtype.UUID        `json:"seller_id"`
+	ListingID   pgtype.UUID        `json:"listing_id"`
+	Status      string             `json:"status"`
+	Quantity    int32              `json:"quantity"`
+	Currency    string             `json:"currency"`
+	UnitPrice   int64              `json:"unit_price"`
+	TotalAmount int64              `json:"total_amount"`
+	ExpiresAt   pgtype.Timestamptz `json:"expires_at"`
+	PaidAt      pgtype.Timestamptz `json:"paid_at"`
+	CompletedAt pgtype.Timestamptz `json:"completed_at"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
+	Seller      []byte             `json:"seller"`
+	Listing     []byte             `json:"listing"`
+}
+
+func (q *Queries) ListBuyerOrders(ctx context.Context, arg ListBuyerOrdersParams) ([]ListBuyerOrdersRow, error) {
+	rows, err := q.db.Query(ctx, listBuyerOrders, arg.BuyerID, arg.PageOffset, arg.PageLimit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListBuyerOrdersRow
+	for rows.Next() {
+		var i ListBuyerOrdersRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.BuyerID,
+			&i.SellerID,
+			&i.ListingID,
+			&i.Status,
+			&i.Quantity,
+			&i.Currency,
+			&i.UnitPrice,
+			&i.TotalAmount,
+			&i.ExpiresAt,
+			&i.PaidAt,
+			&i.CompletedAt,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.Seller,
+			&i.Listing,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const sellerGetOrder = `-- name: SellerGetOrder :many

@@ -1,7 +1,9 @@
 package transport
 
 import (
+	"encoding/json"
 	"errors"
+	"fmt"
 	"math"
 	"net/http"
 	listApp "xisain/mmomarket-backend/internal/modules/listing/application"
@@ -30,6 +32,51 @@ func NewOrderHandler(
 type RegisterOrderRequest struct {
 	ListingID string `json:"listing_id" binding:"required,uuid"`
 	Quantity  int32  `json:"quantity" binding:"required,gt=0"`
+}
+type OrderSellerResponse struct {
+	ID       string `json:"id"`
+	ShopName string `json:"shop_name"`
+	Slug     string `json:"slug"`
+}
+type OrderGameResponse struct {
+	ID   string `json:"id"`
+	GameName string `json:"name"`
+}
+type OrderRegionResponse struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+}
+type OrderServerResponse struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+}
+
+type OrderCategoryResponse struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+}
+
+type OrderListingResponse struct {
+	ID          string                `json:"id"`
+	Name        string                `json:"name"`
+	Slug        string                `json:"slug"`
+	Description *string               `json:"description"`
+	ImageURL    *string               `json:"image_url"`
+	Game        OrderGameResponse     `json:"game"`
+	Category    OrderCategoryResponse `json:"category"`
+	Region      OrderRegionResponse   `json:"region"`
+	Server      OrderServerResponse   `json:"server"`
+}
+
+type BuyerOrderResponse struct {
+	db.BuyerGetOrderRow
+
+	Seller  OrderSellerResponse  `json:"seller"`
+	Listing OrderListingResponse `json:"listing"`
+}
+
+type BuyerOrdersResponse struct {
+	Orders []BuyerOrderResponse `json:"orders"`
 }
 
 func parseUUID(value string) (pgtype.UUID, error) {
@@ -114,21 +161,72 @@ func (o *OrderHandler) RegisterOrder(c *gin.Context) {
 
 func (o *OrderHandler) GetUserOrder(c *gin.Context) {
 	value, exists := c.Get("authUser")
+
 	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"error": "unauthorized",
+		})
 		return
 	}
+
 	user, ok := value.(db.User)
-	if !ok {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
+	if !ok || !user.ID.Valid {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"error": "unauthorized",
+		})
 		return
 	}
-	orders, err := o.service.BuyerGetOrder(c.Request.Context(), user.ID)
+
+	orders, err := o.service.BuyerGetOrder(
+		c.Request.Context(),
+		user.ID,
+	)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "failed to fetch orders",
+		})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"orders": orders})
+
+	response := BuyerOrdersResponse{
+		Orders: make([]BuyerOrderResponse, 0, len(orders)),
+	}
+
+	for _, order := range orders {
+		var seller OrderSellerResponse
+		var listing OrderListingResponse
+
+
+		if err := json.Unmarshal(order.Seller, &seller); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": "failed to decode seller",
+			})
+			return
+		}
+
+		// Convert []byte JSON menjadi struct listing
+		if err := json.Unmarshal(order.Listing, &listing); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": "failed to decode listing",
+			})
+			return
+		}
+		
+		fmt.Println(listing.Category)
+		fmt.Println(listing.Game)
+		fmt.Printf("RAW LISTING: %s\n", string(order.Listing))
+
+		response.Orders = append(
+			response.Orders,
+			BuyerOrderResponse{
+				BuyerGetOrderRow: order,
+				Seller:           seller,
+				Listing:          listing,
+			},
+		)
+	}
+
+	c.JSON(http.StatusOK, response)
 }
 
 func (o *OrderHandler) UserUpdateOrder(c *gin.Context) {
