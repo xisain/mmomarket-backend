@@ -148,6 +148,7 @@ func (s *AuthService) GetCurrentUser(
 	return user, nil
 }
 
+
 func (s *AuthService) Logout(
 	ctx context.Context,
 	token string,

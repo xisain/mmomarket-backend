@@ -5,23 +5,28 @@ import (
 	"fmt"
 	"net/http"
 	"xisain/mmomarket-backend/internal/modules/identity/application"
+	sellapp "xisain/mmomarket-backend/internal/modules/seller/application"
+
 	"xisain/mmomarket-backend/internal/platform/database/db"
 
 	"github.com/gin-gonic/gin"
 )
 
 type AuthHandler struct {
-	service *application.AuthService
-	secure  bool
+	service       *application.AuthService
+	sellerService *sellapp.SellerService
+	secure        bool
 }
 
 func NewAuthHandler(
 	service *application.AuthService,
+	sellerService *sellapp.SellerService,
 	secure bool,
 ) *AuthHandler {
 	return &AuthHandler{
-		service: service,
-		secure:  secure,
+		service:       service,
+		sellerService: sellerService,
+		secure:        secure,
 	}
 }
 
@@ -33,6 +38,12 @@ type RegisterRequest struct {
 type LoginRequest struct {
 	Email    string `json:"email" binding:"required,email"`
 	Password string `json:"password" binding:"required"`
+}
+type MeResponse struct {
+	ID          string `json:"id"`
+	DisplayName string `json:"display_name"`
+	Email       string `json:"email"`
+	Seller      gin.H  `json:"seller"`
 }
 
 func publicUser(user db.User) gin.H {
@@ -139,11 +150,57 @@ func (h *AuthHandler) Login(c *gin.Context) {
 }
 
 func (h *AuthHandler) Me(c *gin.Context) {
-	user := c.MustGet("authUser").(db.User)
+	user, ok := c.Get("authUser")
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"success": false,
+			"message": "Authentication required",
+		})
+		return
+	}
+	authUser, ok := user.(db.User)
+	if !ok {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"message": "Invalid user data",
+		})
+		return
+	}
+
+	data := MeResponse{
+		ID:          authUser.ID.String(),
+		DisplayName: authUser.DisplayName,
+		Email:       authUser.Email,
+		Seller:      nil,
+	}
+
+	seller, err := h.sellerService.GetByOwner(
+		c.Request.Context(),
+		authUser.ID,
+	)
+
+	if err != nil {
+		if !errors.Is(err, sellapp.ErrSellerNotFound) {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"success": false,
+				"message": "Failed to retrieve seller",
+			})
+			return
+		}
+	} else {
+		if seller.ID.Valid {
+			data.Seller = gin.H{
+				"id": seller.ID.String(),
+				"shop_name": seller.ShopName,
+				"slug": seller.Slug,
+				"status": seller.Status,
+			}
+		}
+	}
 
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
-		"data":    publicUser(user),
+		"data":    data,
 	})
 }
 

@@ -25,6 +25,7 @@ import (
 )
 
 func main() {
+	
 	cfg, err := config.Load()
 	if err != nil {
 		log.Fatal(err)
@@ -65,13 +66,22 @@ func main() {
 	if err := router.SetTrustedProxies(nil); err != nil {
 		log.Fatal(err)
 	}
-
+	// Declare Transport & Service
 	queries := dbqueries.New(db)
-
 	authService := application.NewAuthService(queries)
+	sellerService := sellerApp.NewSellerService(db)
+	sellerHandler := sellerTransport.NewSellerHandler(sellerService)
+	gameService := gameApp.NewGameService(db)
+	gameHandler := gameTransport.NewGameHandler(gameService)
+	orderService := OrderApp.NewOrderService(db)
+	listingService := listingApp.NewListingService(db)
+	listingHandler := listingTransport.NewListingHandler(listingService)
+	orderHandler := OrderTransport.NewOrderHandler(orderService,listingService)
+
 
 	authHandler := identityTransport.NewAuthHandler(
 		authService,
+		sellerService,
 		false,
 	)
 
@@ -82,8 +92,7 @@ func main() {
 		authHandler,
 		authService,
 	)
-	sellerService := sellerApp.NewSellerService(db)
-	sellerHandler := sellerTransport.NewSellerHandler(sellerService)
+
 
 	sellerTransport.RegisterSellerRoutes(
 		api,
@@ -91,19 +100,16 @@ func main() {
 		sellerService,
 		authService,
 	)
-	gameService := gameApp.NewGameService(db)
-	gameHandler := gameTransport.NewGameHandler(gameService)
+	
 	gameTransport.RegisterGameRoutes(
 		api,
 		gameHandler,
 		gameService,
 		authService,
 	)
-	listingService := listingApp.NewListingService(db)
-	listingHandler := listingTransport.NewListingHandler(listingService)
+
 	listingTransport.RegisterListingRoutes(api, listingHandler, authService)
-	orderService := OrderApp.NewOrderService(db)
-	orderHandler := OrderTransport.NewOrderHandler(orderService,listingService)
+	
 	OrderTransport.RegisterOrderRoute(api, orderHandler, authService)
 	
 	api.GET("/health", func(c *gin.Context) {
