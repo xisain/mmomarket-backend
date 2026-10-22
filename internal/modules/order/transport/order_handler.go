@@ -7,6 +7,7 @@ import (
 	"math"
 	"net/http"
 	listApp "xisain/mmomarket-backend/internal/modules/listing/application"
+	sellerApp "xisain/mmomarket-backend/internal/modules/seller/application"
 	"xisain/mmomarket-backend/internal/modules/order/application"
 	db "xisain/mmomarket-backend/internal/platform/database/db"
 
@@ -17,15 +18,18 @@ import (
 type OrderHandler struct {
 	service        *application.OrderService
 	listingService *listApp.ListingService
+	sellerService  *sellerApp.SellerService
 }
 
 func NewOrderHandler(
 	service *application.OrderService,
 	listingService *listApp.ListingService,
+	sellerService *sellerApp.SellerService,
 ) *OrderHandler {
 	return &OrderHandler{
 		service:        service,
 		listingService: listingService,
+		sellerService:  sellerService,
 	}
 }
 
@@ -37,6 +41,10 @@ type OrderSellerResponse struct {
 	ID       string `json:"id"`
 	ShopName string `json:"shop_name"`
 	Slug     string `json:"slug"`
+}
+type OrderBuyerResponse struct {
+	ID       string `json:"id"`
+	Name     string `json:"name"`
 }
 type OrderGameResponse struct {
 	ID   string `json:"id"`
@@ -67,7 +75,27 @@ type OrderListingResponse struct {
 	Region      OrderRegionResponse   `json:"region"`
 	Server      OrderServerResponse   `json:"server"`
 }
+type SellerOrderListingResponse struct {
+	ID          string                `json:"id"`
+	Name        string                `json:"name"`
+	Slug        string                `json:"slug"`
+	Description *string               `json:"description"`
+	ImageURL    *string               `json:"image_url"`
+	Game        OrderGameResponse     `json:"game"`
+	Category    OrderCategoryResponse `json:"category"`
+	Region      OrderRegionResponse   `json:"region"`
+	Server      OrderServerResponse   `json:"server"`
+}
+type SellerOrderResponse struct {
+	db.SellerGetOrderRow
 
+	Buyer  OrderBuyerResponse  `json:"buyer"`
+	Listing SellerOrderListingResponse `json:"listing"`
+}
+
+type SellerOrdersResponse struct {
+	Orders []SellerOrderResponse `json:"orders"`
+}
 type BuyerOrderResponse struct {
 	db.BuyerGetOrderRow
 
@@ -267,4 +295,46 @@ func (o *OrderHandler) UserUpdateOrder(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"order": updateOrder})
+}
+
+func (o *OrderHandler) ListSellerOrders(c *gin.Context) {
+	user, exists := c.Get("authUser")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+		return
+	}
+	seller, err := o.sellerService.GetByOwner(c.Request.Context(), user.(db.User).ID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	orders, err := o.service.SellerGetOrder(c.Request.Context(), seller.ID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	response := SellerOrdersResponse {
+		Orders: make([]SellerOrderResponse, 0, len(orders)),
+	}
+	for _, order := range orders {
+		var buyer OrderBuyerResponse
+		
+		if err := json.Unmarshal(order.Buyer, &buyer); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		
+		var listing SellerOrderListingResponse
+		if err := json.Unmarshal(order.Listing, &listing); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		
+		response.Orders = append(response.Orders, SellerOrderResponse{
+			SellerGetOrderRow: order,
+			Buyer:              buyer,
+			Listing:            listing,
+		})
+	}
+	c.JSON(http.StatusOK, response)
 }

@@ -11,19 +11,22 @@ import (
 	"xisain/mmomarket-backend/internal/platform/database/db"
 
 	"xisain/mmomarket-backend/internal/modules/listing/application"
+	sellerApp "xisain/mmomarket-backend/internal/modules/seller/application"
 
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type ListingHandler struct {
-	service *application.ListingService
+	service        *application.ListingService
+	sellerService  *sellerApp.SellerService
 }
 
 func NewListingHandler(
 	service *application.ListingService,
+	sellerService *sellerApp.SellerService,
 ) *ListingHandler {
-	return &ListingHandler{service: service}
+	return &ListingHandler{service: service, sellerService: sellerService}
 }
 
 type RegisterListingRequest struct {
@@ -273,7 +276,7 @@ func (h *ListingHandler) ListSellerListings(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, gin.H{"success": false, "message": "Authentication required"})
 		return
 	}
-	sellerID, err := parseUUID(c.Param("seller_id"))
+	seller, err := h.sellerService.GetByOwner(c.Request.Context(),user.ID)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"success": false, "message": "Invalid seller ID"})
 		return
@@ -288,7 +291,7 @@ func (h *ListingHandler) ListSellerListings(c *gin.Context) {
 		respondError(c, application.ErrListingInvalidPagination)
 		return
 	}
-	listings, err := h.service.ListSellerListings(c.Request.Context(), user.ID, db.ListListingsBySellerParams{SellerID: sellerID, Limit: int32(limit), Offset: int32(offset)})
+	listings, err := h.service.ListSellerListings(c.Request.Context(), user.ID, db.ListListingsBySellerParams{SellerID: seller.ID, Limit: int32(limit), Offset: int32(offset)})
 	if err != nil {
 		respondError(c, err)
 		return

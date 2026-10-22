@@ -93,7 +93,7 @@ func (s *OrderService) BuyerGetOrderByStatus(ctx context.Context, input db.Buyer
 	return orders, orderError("list buyer orders by status", err)
 }
 
-func (s *OrderService) SellerGetOrder(ctx context.Context, sellerID pgtype.UUID) ([]db.Order, error) {
+func (s *OrderService) SellerGetOrder(ctx context.Context, sellerID pgtype.UUID) ([]db.SellerGetOrderRow, error) {
 	if !sellerID.Valid {
 		return nil, ErrOrderInvalidReference
 	}

@@ -75,8 +75,8 @@ func main() {
 	gameHandler := gameTransport.NewGameHandler(gameService)
 	orderService := OrderApp.NewOrderService(db)
 	listingService := listingApp.NewListingService(db)
-	listingHandler := listingTransport.NewListingHandler(listingService)
-	orderHandler := OrderTransport.NewOrderHandler(orderService,listingService)
+	listingHandler := listingTransport.NewListingHandler(listingService, sellerService)
+	orderHandler := OrderTransport.NewOrderHandler(orderService,listingService,sellerService)
 
 
 	authHandler := identityTransport.NewAuthHandler(
@@ -97,8 +97,11 @@ func main() {
 	sellerTransport.RegisterSellerRoutes(
 		api,
 		sellerHandler,
+		orderHandler,
+		listingHandler,
 		sellerService,
 		authService,
+		listingService,
 	)
 	
 	gameTransport.RegisterGameRoutes(

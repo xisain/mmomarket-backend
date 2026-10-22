@@ -207,6 +207,7 @@ func (h *ListingService) ListSellerListings(ctx context.Context, userID pgtype.U
 	return h.queries.ListListingsBySeller(ctx, input)
 }
 
+
 func (h *ListingService) validateLocation(ctx context.Context, gameID, regionID, serverID pgtype.UUID) error {
 	if regionID.Valid {
 		region, err := h.queries.GetGameRegionByID(ctx, regionID)

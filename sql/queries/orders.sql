@@ -68,7 +68,49 @@ WHERE id = $1 AND buyer_id = $2
 RETURNING *;
 
 -- name: SellerGetOrder :many
-SELECT * FROM orders WHERE seller_id = $1;
+SELECT
+    ord.*,
+    jsonb_build_object(
+        'id', us.id,
+        'name', us.display_name
+    ) AS buyer,
+
+    jsonb_build_object(
+      'id',
+      ls.id,
+      'name',
+      ls.name,
+      'slug',
+      ls.slug,
+      'description',
+      ls.description,
+      'image_url',
+      ls.image_url,
+      'price',
+      ls.price,
+      'game', jsonb_build_object('id', gm.id, 'name', gm.name ),
+      'category', jsonb_build_object('id', lc.id, 'name', lc.name),
+      'region', jsonb_build_object('id', gr.id, 'name', gr.name),
+      'server', jsonb_build_object('id',gs.id, 'name',gs.name)
+
+    ) AS listing
+
+FROM orders AS ord
+JOIN users AS us
+    ON ord.buyer_id = us.id
+JOIN listings AS ls
+    ON ord.listing_id = ls.id
+JOIN games gm 
+    ON ls.game_id = gm.id
+JOIN listing_categorys lc 
+    ON ls.category_id = lc.id
+JOIN game_regions gr 
+    ON ls.game_region_id =gr.id
+LEFT JOIN game_servers gs 
+    ON gs.id = ls.server_id
+WHERE ord.seller_id = $1
+ORDER BY ord.created_at DESC, ord.id DESC;
+
 
 -- name: SellerGetOrderByStatus :many
 SELECT * FROM orders WHERE seller_id = $1 AND status = $2;

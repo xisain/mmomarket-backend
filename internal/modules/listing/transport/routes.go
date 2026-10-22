@@ -12,11 +12,12 @@ func RegisterListingRoutes(api *gin.RouterGroup, handler *ListingHandler, authSe
 	admin.POST("", handler.RegisterListingCategory)
 	admin.GET("", handler.ListListingCategories)
 
-	seller := api.Group("/seller/:seller_id")
-	seller.Use(identityTransport.RequireAuth(authService))
-	seller.GET("/listing-categories", handler.ListListingCategories)
-	seller.POST("/listings", handler.RegisterListing)
-	seller.GET("/listings", handler.ListSellerListings)
+	// seller := api.Group("/seller/:seller_id")
+	// seller.Use(identityTransport.RequireAuth(authService))
+	// seller.GET("/listing-categories", handler.ListListingCategories)
+	// seller.POST("/listings", handler.RegisterListing)
+	// seller.GET("/listings", handler.ListSellerListings)
+	// seller.GET("orders")
 
 	public := api.Group("/public")
 	// public.GET("/listings/:gameID/:categoryID", handler.ListListingByGameAndCategory)

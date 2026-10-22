@@ -362,18 +362,78 @@ func (q *Queries) ListBuyerOrders(ctx context.Context, arg ListBuyerOrdersParams
 }
 
 const sellerGetOrder = `-- name: SellerGetOrder :many
-SELECT id, buyer_id, seller_id, listing_id, status, quantity, currency, unit_price, total_amount, expires_at, paid_at, completed_at, created_at, updated_at FROM orders WHERE seller_id = $1
+SELECT
+    ord.id, ord.buyer_id, ord.seller_id, ord.listing_id, ord.status, ord.quantity, ord.currency, ord.unit_price, ord.total_amount, ord.expires_at, ord.paid_at, ord.completed_at, ord.created_at, ord.updated_at,
+    jsonb_build_object(
+        'id', us.id,
+        'name', us.display_name
+    ) AS buyer,
+
+    jsonb_build_object(
+      'id',
+      ls.id,
+      'name',
+      ls.name,
+      'slug',
+      ls.slug,
+      'description',
+      ls.description,
+      'image_url',
+      ls.image_url,
+      'price',
+      ls.price,
+      'game', jsonb_build_object('id', gm.id, 'name', gm.name ),
+      'category', jsonb_build_object('id', lc.id, 'name', lc.name),
+      'region', jsonb_build_object('id', gr.id, 'name', gr.name),
+      'server', jsonb_build_object('id',gs.id, 'name',gs.name)
+
+    ) AS listing
+
+FROM orders AS ord
+JOIN users AS us
+    ON ord.buyer_id = us.id
+JOIN listings AS ls
+    ON ord.listing_id = ls.id
+JOIN games gm 
+    ON ls.game_id = gm.id
+JOIN listing_categorys lc 
+    ON ls.category_id = lc.id
+JOIN game_regions gr 
+    ON ls.game_region_id =gr.id
+LEFT JOIN game_servers gs 
+    ON gs.id = ls.server_id
+WHERE ord.seller_id = $1
+ORDER BY ord.created_at DESC, ord.id DESC
 `
 
-func (q *Queries) SellerGetOrder(ctx context.Context, sellerID pgtype.UUID) ([]Order, error) {
+type SellerGetOrderRow struct {
+	ID          pgtype.UUID        `json:"id"`
+	BuyerID     pgtype.UUID        `json:"buyer_id"`
+	SellerID    pgtype.UUID        `json:"seller_id"`
+	ListingID   pgtype.UUID        `json:"listing_id"`
+	Status      string             `json:"status"`
+	Quantity    int32              `json:"quantity"`
+	Currency    string             `json:"currency"`
+	UnitPrice   int64              `json:"unit_price"`
+	TotalAmount int64              `json:"total_amount"`
+	ExpiresAt   pgtype.Timestamptz `json:"expires_at"`
+	PaidAt      pgtype.Timestamptz `json:"paid_at"`
+	CompletedAt pgtype.Timestamptz `json:"completed_at"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
+	Buyer       []byte             `json:"buyer"`
+	Listing     []byte             `json:"listing"`
+}
+
+func (q *Queries) SellerGetOrder(ctx context.Context, sellerID pgtype.UUID) ([]SellerGetOrderRow, error) {
 	rows, err := q.db.Query(ctx, sellerGetOrder, sellerID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Order
+	var items []SellerGetOrderRow
 	for rows.Next() {
-		var i Order
+		var i SellerGetOrderRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.BuyerID,
@@ -389,6 +449,8 @@ func (q *Queries) SellerGetOrder(ctx context.Context, sellerID pgtype.UUID) ([]O
 			&i.CompletedAt,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.Buyer,
+			&i.Listing,
 		); err != nil {
 			return nil, err
 		}
