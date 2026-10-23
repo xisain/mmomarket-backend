@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"strings"
 	"xisain/mmomarket-backend/internal/platform/database/db"
-
+	"encoding/json"
 	"xisain/mmomarket-backend/internal/modules/listing/application"
 	sellerApp "xisain/mmomarket-backend/internal/modules/seller/application"
 
@@ -44,6 +44,9 @@ type RegisterListingRequest struct {
 	StockType       string `json:"stock_type" binding:"required,oneof=finite unlimited"`
 	StockQuantity   *int64 `json:"stock_quantity"`
 	QuantityPerUnit int64  `json:"quantity_per_unit" binding:"required,min=1"`
+}
+type ListListingsByGameSlugAndCategoryResponse struct {
+	Listings []db.ListListingsByGameSlugAndCategoryRow `json:"listings"`
 }
 
 // Helper UUID wajib
@@ -382,26 +385,62 @@ func (h *ListingHandler) ListListingByGameAndCategory(c *gin.Context) {
 }
 
 func (h *ListingHandler) ListingByGameSlugAndCategorySlug(c *gin.Context) {
-	gameSlug := c.Param("gameSlug")
-	categorySlug := c.Param("categorySlug")
-	limit := int32(10)
-	offset := int32(0)
-	params := db.ListListingsByGameSlugAndCategoryParams{
-		Slug:       gameSlug,
-		Slug_2:     categorySlug,
-		Limit:      limit,
-		Offset:     offset,
-	}
-	listings, err := h.service.ListListingByGameSlugAndCategorySlug(c.Request.Context(), params)
-	if err != nil {
-		respondError(c, err)
-		return
-	}
+    gameSlug := c.Param("gameSlug")
+    categorySlug := c.Param("categorySlug")
 
-	c.JSON(http.StatusOK, gin.H{
-		"success": true,
-		"data":    listings,
-	})
+    params := db.ListListingsByGameSlugAndCategoryParams{
+        Slug:   gameSlug,
+        Slug_2: categorySlug,
+        Limit:  10,
+        Offset: 0,
+    }
+
+    listings, err := h.service.ListListingByGameSlugAndCategorySlug(
+        c.Request.Context(),
+        params,
+    )
+    if err != nil {
+        respondError(c, err)
+        return
+    }
+
+    type ListingResponse struct {
+        db.ListListingsByGameSlugAndCategoryRow
+        Seller json.RawMessage `json:"seller"`
+        Region json.RawMessage `json:"region"`
+        Server json.RawMessage `json:"server"`
+    }
+
+    response := make([]ListingResponse, 0, len(listings))
+
+    for _, listing := range listings {
+        // Mengasumsikan field Seller hasil sqlc bertipe []byte.
+        regionJSON := json.RawMessage(listing.Region)
+        sellerJSON := json.RawMessage(listing.Seller)
+        serverJSON := json.RawMessage(listing.Server)
+
+        if !json.Valid(sellerJSON) {
+            sellerJSON = json.RawMessage(`null`)
+        }
+        if !json.Valid(regionJSON) {
+            regionJSON = json.RawMessage(`null`)
+        }
+        if !json.Valid(serverJSON) {
+            serverJSON = json.RawMessage(`null`)
+        }
+
+        response = append(response, ListingResponse{
+            ListListingsByGameSlugAndCategoryRow: listing,
+            Seller: sellerJSON,
+            Region: regionJSON,
+            Server: serverJSON,
+        })
+    }
+
+    c.JSON(http.StatusOK, gin.H{
+        "success": true,
+        "data":    response,
+    })
 }
 func respondError(c *gin.Context, err error) {
 	status := http.StatusInternalServerError

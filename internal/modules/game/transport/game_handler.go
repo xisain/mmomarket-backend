@@ -351,3 +351,22 @@ func (h *GameHandler) GetGame(c *gin.Context) {
 		"data":    data,
 	})
 }
+func (h *GameHandler) getCategoriesByGame(c *gin.Context) {
+	slug := c.Param("slug")
+	gameCat, err := h.service.GetCategoriesByGame(
+		c.Request.Context(),
+		slug,
+	)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"message": "Failed to list game categories",
+		})
+		return
+	}
+	// gameListing, err := h.service
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"data":    gameCat,
+	})
+}

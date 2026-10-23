@@ -19,8 +19,8 @@ func RegisterListingRoutes(api *gin.RouterGroup, handler *ListingHandler, authSe
 	// seller.GET("/listings", handler.ListSellerListings)
 	// seller.GET("orders")
 
-	public := api.Group("/public")
+	public := api.Group("/listings")
 	// public.GET("/listings/:gameID/:categoryID", handler.ListListingByGameAndCategory)
-	public.GET("/listings/:gameSlug/:categorySlug", handler.ListingByGameSlugAndCategorySlug)
+	public.GET("/:gameSlug/:categorySlug", handler.ListingByGameSlugAndCategorySlug)
 	
 }

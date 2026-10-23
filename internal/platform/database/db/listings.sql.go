@@ -353,12 +353,19 @@ func (q *Queries) ListListingsByGameAndRegion(ctx context.Context, arg ListListi
 }
 
 const listListingsByGameSlugAndCategory = `-- name: ListListingsByGameSlugAndCategory :many
-SELECT ls.id, ls.game_id, ls.category_id, ls.game_region_id, ls.server_id, ls.seller_id, ls.name, ls.slug, ls.description, ls.image_url, ls.price, ls.stock_type, ls.stock_quantity, ls.quantity_per_unit, ls.status, ls.created_at, ls.updated_at 
-FROM  listings ls 
-JOIN games gm ON ls.game_id = gm.id  
+SELECT
+    ls.id, ls.game_id, ls.category_id, ls.game_region_id, ls.server_id, ls.seller_id, ls.name, ls.slug, ls.description, ls.image_url, ls.price, ls.stock_type, ls.stock_quantity, ls.quantity_per_unit, ls.status, ls.created_at, ls.updated_at,
+    JSONB_BUILD_OBJECT('id', gr.id, 'name', gr.name) AS region,
+    JSONB_BUILD_OBJECT('id', gs.id, 'name', gs.name) AS server,
+   
+   JSONB_BUILD_OBJECT('id', sl.id, 'name', sl.shop_name)   AS seller
+FROM listings ls
+JOIN games gm ON ls.game_id = gm.id
 JOIN listing_categorys lc ON ls.category_id = lc.id
-JOIN sellers sl on ls.seller_id = sl.id
-WHERE gm.slug = $1 AND lc.slug = $2 
+JOIN sellers sl ON ls.seller_id = sl.id
+JOIN game_regions gr ON ls.game_region_id = gr.id
+JOIN game_servers gs ON ls.server_id = gs.id
+WHERE gm.slug = $1 AND lc.slug = $2
 LIMIT $3 OFFSET $4
 `
 
@@ -369,7 +376,30 @@ type ListListingsByGameSlugAndCategoryParams struct {
 	Offset int32  `json:"offset"`
 }
 
-func (q *Queries) ListListingsByGameSlugAndCategory(ctx context.Context, arg ListListingsByGameSlugAndCategoryParams) ([]Listing, error) {
+type ListListingsByGameSlugAndCategoryRow struct {
+	ID              pgtype.UUID        `json:"id"`
+	GameID          pgtype.UUID        `json:"game_id"`
+	CategoryID      pgtype.UUID        `json:"category_id"`
+	GameRegionID    pgtype.UUID        `json:"game_region_id"`
+	ServerID        pgtype.UUID        `json:"server_id"`
+	SellerID        pgtype.UUID        `json:"seller_id"`
+	Name            string             `json:"name"`
+	Slug            string             `json:"slug"`
+	Description     pgtype.Text        `json:"description"`
+	ImageUrl        pgtype.Text        `json:"image_url"`
+	Price           pgtype.Numeric     `json:"price"`
+	StockType       string             `json:"stock_type"`
+	StockQuantity   pgtype.Int8        `json:"stock_quantity"`
+	QuantityPerUnit int64              `json:"quantity_per_unit"`
+	Status          string             `json:"status"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+	Region          []byte             `json:"region"`
+	Server          []byte             `json:"server"`
+	Seller          []byte             `json:"seller"`
+}
+
+func (q *Queries) ListListingsByGameSlugAndCategory(ctx context.Context, arg ListListingsByGameSlugAndCategoryParams) ([]ListListingsByGameSlugAndCategoryRow, error) {
 	rows, err := q.db.Query(ctx, listListingsByGameSlugAndCategory,
 		arg.Slug,
 		arg.Slug_2,
@@ -380,9 +410,9 @@ func (q *Queries) ListListingsByGameSlugAndCategory(ctx context.Context, arg Lis
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Listing
+	var items []ListListingsByGameSlugAndCategoryRow
 	for rows.Next() {
-		var i Listing
+		var i ListListingsByGameSlugAndCategoryRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.GameID,
@@ -401,6 +431,9 @@ func (q *Queries) ListListingsByGameSlugAndCategory(ctx context.Context, arg Lis
 			&i.Status,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.Region,
+			&i.Server,
+			&i.Seller,
 		); err != nil {
 			return nil, err
 		}

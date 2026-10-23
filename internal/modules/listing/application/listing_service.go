@@ -306,7 +306,7 @@ func (h *ListingService) ListListingsBySeller(ctx context.Context, input db.List
 	return h.queries.ListListingsBySeller(ctx, input)
 }
 
-func (h *ListingService) ListListingByGameSlugAndCategorySlug(ctx context.Context,input db.ListListingsByGameSlugAndCategoryParams) ([]db.Listing, error){
+func (h *ListingService) ListListingByGameSlugAndCategorySlug(ctx context.Context,input db.ListListingsByGameSlugAndCategoryParams) ([]db.ListListingsByGameSlugAndCategoryRow, error){
 	if input.Slug == "" || input.Slug_2  == ""{
 		return nil, ErrListingInvalidSlug
 	}

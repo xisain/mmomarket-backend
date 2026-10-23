@@ -45,12 +45,19 @@ WHERE game_id = $1 AND game_region_id = $2
 ORDER BY created_at DESC, id DESC
 LIMIT $3 OFFSET $4;
 -- name: ListListingsByGameSlugAndCategory :many
-SELECT ls.* 
-FROM  listings ls 
-JOIN games gm ON ls.game_id = gm.id  
+SELECT
+    ls.*,
+    JSONB_BUILD_OBJECT('id', gr.id, 'name', gr.name) AS region,
+    JSONB_BUILD_OBJECT('id', gs.id, 'name', gs.name) AS server,
+   
+   JSONB_BUILD_OBJECT('id', sl.id, 'name', sl.shop_name)   AS seller
+FROM listings ls
+JOIN games gm ON ls.game_id = gm.id
 JOIN listing_categorys lc ON ls.category_id = lc.id
-JOIN sellers sl on ls.seller_id = sl.id
-WHERE gm.slug = $1 AND lc.slug = $2 
+JOIN sellers sl ON ls.seller_id = sl.id
+JOIN game_regions gr ON ls.game_region_id = gr.id
+JOIN game_servers gs ON ls.server_id = gs.id
+WHERE gm.slug = $1 AND lc.slug = $2
 LIMIT $3 OFFSET $4;
 
 -- name: ListListingsByServer :many
