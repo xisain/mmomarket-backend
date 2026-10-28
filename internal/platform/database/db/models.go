@@ -8,6 +8,22 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+type Cart struct {
+	ID        pgtype.UUID        `json:"id"`
+	UserID    pgtype.UUID        `json:"user_id"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
+}
+
+type CartItem struct {
+	ID        pgtype.UUID        `json:"id"`
+	CartID    pgtype.UUID        `json:"cart_id"`
+	ListingID pgtype.UUID        `json:"listing_id"`
+	Quantity  int32              `json:"quantity"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
+}
+
 type Game struct {
 	ID          pgtype.UUID        `json:"id"`
 	Name        string             `json:"name"`
@@ -83,6 +99,77 @@ type Order struct {
 	CompletedAt pgtype.Timestamptz `json:"completed_at"`
 	CreatedAt   pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
+}
+
+type Payment struct {
+	ID                pgtype.UUID        `json:"id"`
+	OrderID           pgtype.UUID        `json:"order_id"`
+	ProviderID        pgtype.UUID        `json:"provider_id"`
+	MerchantReference string             `json:"merchant_reference"`
+	ProviderPaymentID pgtype.Text        `json:"provider_payment_id"`
+	Amount            int64              `json:"amount"`
+	Currency          string             `json:"currency"`
+	Status            string             `json:"status"`
+	PaymentMethod     pgtype.Text        `json:"payment_method"`
+	CheckoutUrl       pgtype.Text        `json:"checkout_url"`
+	ExpiresAt         pgtype.Timestamptz `json:"expires_at"`
+	PaidAt            pgtype.Timestamptz `json:"paid_at"`
+	FailureCode       pgtype.Text        `json:"failure_code"`
+	FailureMessage    pgtype.Text        `json:"failure_message"`
+	CreatedAt         pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
+}
+
+type PaymentEvent struct {
+	ID              pgtype.UUID        `json:"id"`
+	PaymentID       pgtype.UUID        `json:"payment_id"`
+	ProviderID      pgtype.UUID        `json:"provider_id"`
+	ProviderEventID pgtype.Text        `json:"provider_event_id"`
+	EventType       string             `json:"event_type"`
+	Payload         []byte             `json:"payload"`
+	Status          string             `json:"status"`
+	ErrorMessage    pgtype.Text        `json:"error_message"`
+	ReceivedAt      pgtype.Timestamptz `json:"received_at"`
+	ProcessedAt     pgtype.Timestamptz `json:"processed_at"`
+}
+
+type PaymentProvider struct {
+	ID        pgtype.UUID        `json:"id"`
+	Code      string             `json:"code"`
+	Name      string             `json:"name"`
+	IsActive  bool               `json:"is_active"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
+}
+
+type Refund struct {
+	ID                pgtype.UUID        `json:"id"`
+	PaymentID         pgtype.UUID        `json:"payment_id"`
+	MerchantReference string             `json:"merchant_reference"`
+	ProviderRefundID  pgtype.Text        `json:"provider_refund_id"`
+	Amount            int64              `json:"amount"`
+	Currency          string             `json:"currency"`
+	Status            string             `json:"status"`
+	Reason            string             `json:"reason"`
+	FailureCode       pgtype.Text        `json:"failure_code"`
+	FailureMessage    pgtype.Text        `json:"failure_message"`
+	RequestedAt       pgtype.Timestamptz `json:"requested_at"`
+	CompletedAt       pgtype.Timestamptz `json:"completed_at"`
+	CreatedAt         pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
+}
+
+type RefundEvent struct {
+	ID              pgtype.UUID        `json:"id"`
+	RefundID        pgtype.UUID        `json:"refund_id"`
+	ProviderID      pgtype.UUID        `json:"provider_id"`
+	ProviderEventID pgtype.Text        `json:"provider_event_id"`
+	EventType       string             `json:"event_type"`
+	Payload         []byte             `json:"payload"`
+	Status          string             `json:"status"`
+	ErrorMessage    pgtype.Text        `json:"error_message"`
+	ReceivedAt      pgtype.Timestamptz `json:"received_at"`
+	ProcessedAt     pgtype.Timestamptz `json:"processed_at"`
 }
 
 type Role struct {

@@ -6,6 +6,8 @@ import (
 	"log"
 	"net/http"
 	"time"
+	cartApp "xisain/mmomarket-backend/internal/modules/cart/application"
+	cartTransport "xisain/mmomarket-backend/internal/modules/cart/transport"
 	gameApp "xisain/mmomarket-backend/internal/modules/game/application"
 	gameTransport "xisain/mmomarket-backend/internal/modules/game/transport"
 	"xisain/mmomarket-backend/internal/modules/identity/application"
@@ -25,7 +27,7 @@ import (
 )
 
 func main() {
-	
+
 	cfg, err := config.Load()
 	if err != nil {
 		log.Fatal(err)
@@ -58,7 +60,7 @@ func main() {
 			"Authorization",
 		},
 		AllowCredentials: true,
-		MaxAge: 12 * time.Hour,
+		MaxAge:           12 * time.Hour,
 	}))
 	router.Use(cfg.Sentry)
 	// router.
@@ -76,8 +78,9 @@ func main() {
 	orderService := OrderApp.NewOrderService(db)
 	listingService := listingApp.NewListingService(db)
 	listingHandler := listingTransport.NewListingHandler(listingService, sellerService)
-	orderHandler := OrderTransport.NewOrderHandler(orderService,listingService,sellerService)
-
+	orderHandler := OrderTransport.NewOrderHandler(orderService, listingService, sellerService)
+	cartService := cartApp.NewCartService(db)
+	cartHandler := cartTransport.NewCartHandler(cartService)
 
 	authHandler := identityTransport.NewAuthHandler(
 		authService,
@@ -93,7 +96,6 @@ func main() {
 		authService,
 	)
 
-
 	sellerTransport.RegisterSellerRoutes(
 		api,
 		sellerHandler,
@@ -103,7 +105,7 @@ func main() {
 		authService,
 		listingService,
 	)
-	
+
 	gameTransport.RegisterGameRoutes(
 		api,
 		gameHandler,
@@ -112,9 +114,11 @@ func main() {
 	)
 
 	listingTransport.RegisterListingRoutes(api, listingHandler, authService)
-	
+
 	OrderTransport.RegisterOrderRoute(api, orderHandler, authService)
-	
+
+	cartTransport.RegisterCartRoute(api, cartHandler, authService)
+
 	api.GET("/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"success": true,
